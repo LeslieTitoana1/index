@@ -197,22 +197,49 @@
     const mapModulacion = { "QPSK": 4, "16QAM": 16, "64QAM": 64 };
     const mapRc = { "1/2": 1/2, "2/3": 2/3, "3/4": 3/4, "5/6": 5/6, "7/8": 7/8 };
     const mapAlfa = { "T/4": 0.25, "T/8": 0.125, "T/16": 0.0625, "T/32": 0.03125 };
+    const MAX_SEGMENTOS = 13;
 
-    function actualizarOpcionesSegmentos() {
-      const selects = document.querySelectorAll(".segmentos");
-      const valores = Array.from(selects).map(s => parseInt(s.value));
-      const sumaActual = valores.reduce((a, b) => a + b, 0);
-
-      selects.forEach((select, i) => {
-        const otraSuma = sumaActual - valores[i];
-        const maxPermitido = 13 - otraSuma;
-
-        select.querySelectorAll("option").forEach(opt => {
-          opt.disabled = parseInt(opt.value) > maxPermitido;
-        });
+    // Inicializa opciones de segmentos del 0 al 13 para cada select
+    function inicializarSegmentos() {
+      document.querySelectorAll(".segmentos").forEach(select => {
+        select.innerHTML = ""; // limpiar opciones
+        for (let i = 0; i <= MAX_SEGMENTOS; i++) {
+          const opt = document.createElement("option");
+          opt.value = i;
+          opt.text = i;
+          select.appendChild(opt);
+        }
+        select.value = "0"; // valor inicial 0
       });
     }
 
+    // Actualiza las opciones disponibles para los selects de segmentos
+    // para que la suma total no pase de MAX_SEGMENTOS (13)
+    function actualizarOpcionesSegmentos() {
+      const selects = Array.from(document.querySelectorAll(".segmentos"));
+      const valores = selects.map(s => parseInt(s.value));
+
+      const sumaTotal = valores.reduce((a, b) => a + b, 0);
+
+      selects.forEach((select, idx) => {
+        const sumaSinEste = sumaTotal - valores[idx];
+        const maxPermitido = MAX_SEGMENTOS - sumaSinEste;
+
+        // Habilitar/deshabilitar opciones según límite máximo
+        Array.from(select.options).forEach(opt => {
+          const val = parseInt(opt.value);
+          opt.disabled = val > maxPermitido;
+        });
+
+        // Si el valor seleccionado es mayor que el maxPermitido, ajustarlo automáticamente
+        if (valores[idx] > maxPermitido) {
+          select.value = maxPermitido;
+          valores[idx] = maxPermitido; // actualizar valor local
+        }
+      });
+    }
+
+    // Calcula la tasa Rb para cada capa
     function calcularRbParaCapa(caja, alfa) {
       const segmentos = parseInt(caja.querySelector(".segmentos").value);
       if (segmentos === 0) {
@@ -230,6 +257,7 @@
       return Rb;
     }
 
+    // Calcula todo y actualiza la UI
     function calcularTodo() {
       actualizarOpcionesSegmentos();
       const alfa = mapAlfa[document.getElementById("tiempo-guarda").value];
@@ -240,21 +268,13 @@
       document.getElementById("tasa-total").textContent = `Tasa total de bits: ${total.toFixed(3)} Mbps`;
     }
 
-    // Inicializar selects
-    document.querySelectorAll(".segmentos").forEach(select => {
-      for (let i = 0; i <= 13; i++) {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.text = i;
-        select.appendChild(opt);
-      }
-    });
-
+    // Inicializar todo al cargar la página
+    inicializarSegmentos();
     document.querySelectorAll("select").forEach(select => {
       select.addEventListener("change", calcularTodo);
     });
-
     calcularTodo();
   </script>
 </body>
 </html>
+
